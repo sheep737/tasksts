@@ -1,13 +1,25 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f2f2f7;
+  margin: 0;
   padding: 12px;
-  background: #f5f5f5;
 }
 
-/* 入力欄 */
+h1 {
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.input-area {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+}
+
 input, textarea {
   width: 100%;
-  font-size: 16px; /* ← 重要 */
+  font-size: 16px; /* iOSズーム防止 */
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 8px;
@@ -15,40 +27,51 @@ input, textarea {
   box-sizing: border-box;
 }
 
-/* 追加ボタン */
-button {
-  width: 100%;
-  font-size: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: #007aff; /* iOS風ブルー */
-  color: white;
+textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
-/* タスクカード */
+button {
+  width: 100%;
+  min-height: 44px; /* タップしやすさ */
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  background: #007aff;
+  color: #fff;
+}
+
+ul {
+  padding: 0;
+  margin-top: 14px;
+}
+
 li {
   list-style: none;
-  background: white;
-  border-radius: 10px;
+  background: #fff;
+  border-radius: 12px;
   padding: 12px;
-  margin-top: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 12px;
 }
 
 .task-title {
   font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.task-date {
+  font-size: 12px;
+  color: #888;
   margin-bottom: 6px;
 }
 
 .task-detail {
   white-space: pre-wrap;
   font-size: 14px;
-  color: #333;
+  margin-bottom: 10px;
 }
 
-/* 削除ボタン */
 .delete {
-  margin-top: 10px;
   background: #ff3b30;
 }
