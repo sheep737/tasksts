@@ -47,6 +47,13 @@ li {
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+li > :not(.delete) {
+  flex: 1;
 }
 
 .task-title {
@@ -67,5 +74,9 @@ li {
 }
 
 .delete {
+  background: #ff3b30;
+  width: 60px;
+  min-height: 44px;
+  align-self: center;
   background: #ff3b30;
 }
