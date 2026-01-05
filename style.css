@@ -1,25 +1,54 @@
 body {
-  font-family: sans-serif;
-  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 12px;
+  background: #f5f5f5;
 }
 
+/* 入力欄 */
 input, textarea {
   width: 100%;
-  margin-bottom: 8px;
+  font-size: 16px; /* ← 重要 */
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
 }
 
+/* 追加ボタン */
+button {
+  width: 100%;
+  font-size: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #007aff; /* iOS風ブルー */
+  color: white;
+}
+
+/* タスクカード */
 li {
   list-style: none;
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-top: 10px;
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .task-title {
   font-weight: bold;
+  margin-bottom: 6px;
 }
 
 .task-detail {
-  margin: 6px 0;
-  white-space: pre-wrap; /* 改行をそのまま表示 */
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: #333;
+}
+
+/* 削除ボタン */
+.delete {
+  margin-top: 10px;
+  background: #ff3b30;
 }

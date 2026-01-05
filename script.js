@@ -14,7 +14,11 @@ addBtn.addEventListener("click", () => {
     <button class="delete">削除</button>
   `;
 
-  li.querySelector(".delete").onclick = () => li.remove();
+li.querySelector(".delete").onclick = () => {
+  if (confirm("このタスクを削除しますか？")) {
+    li.remove();
+  }
+};
 
   taskList.appendChild(li);
 
