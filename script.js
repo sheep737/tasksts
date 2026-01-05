@@ -18,7 +18,6 @@ addBtn.addEventListener("click", () => {
     id: Date.now(),
     title,
     detail,
-    createdAt: new Date().toLocaleString()
   };
 
   addTask(task);
@@ -37,7 +36,6 @@ function addTask(task) {
 
   li.innerHTML = `
     <div class="task-title">${task.title}</div>
-    <div class="task-date">${task.createdAt}</div>
     <div class="task-detail">${task.detail}</div>
     <button class="delete">削除</button>
   `;
