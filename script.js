@@ -30,7 +30,6 @@ addBtn.addEventListener("click", () => {
 });
 
 const newBtn = document.getElementById("newBtn");
-const taskInput = document.getElementById("taskInput");
 
 newBtn.addEventListener("click", () => {
   taskInput.focus();
