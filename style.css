@@ -80,3 +80,20 @@ li > :not(.delete) {
   background: #ff3b30;
   flex-shrink: 0;
 }
+
+.new-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
