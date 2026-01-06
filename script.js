@@ -31,9 +31,13 @@ addBtn.addEventListener("click", () => {
 
 const newBtn = document.getElementById("newBtn");
 
+newBtn.addEventListener("click", (e) => {
+  e.preventDefault();
 
-newBtn.addEventListener("click", () => {
-  taskInput.focus();
+  setTimeout(() => {
+    taskInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    taskInput.focus();
+  }, 50);
 });
 
 // タスク描画
