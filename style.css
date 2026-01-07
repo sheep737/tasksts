@@ -19,8 +19,6 @@ body {
   background: #f2f2f7;
   margin: 0;
   padding: 8px;
-
-  padding-bottom: 220px; /* ← 入力欄の高さ分 */
 }
 
 .input-area {
