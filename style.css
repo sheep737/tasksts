@@ -3,12 +3,22 @@ body {
   background: #f2f2f7;
   margin: 0;
   padding: 8px;
+
+  padding-bottom: 220px; /* ← 入力欄の高さ分 */
 }
 
 .input-area {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+
   background: #fff;
   padding: 12px;
-  border-radius: 12px;
+  border-top: 1px solid #ddd;
+
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.08);
+  z-index: 100;
 }
 
 input, textarea {
