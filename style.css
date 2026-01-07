@@ -12,7 +12,7 @@ body {
   left: 0;
   bottom: 0;
   width: 100%;
-
+  box-sizing: border-box;
   background: #fff;
   padding: 12px;
   border-top: 1px solid #ddd;
