@@ -9,7 +9,6 @@ html, body {
   left: 0;
   right: 0;
 
-  bottom: 220px; /* 入力欄の高さ */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
