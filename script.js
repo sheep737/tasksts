@@ -5,6 +5,7 @@ const taskList = document.getElementById("taskList");
 
 const STORAGE_KEY = "iphone_tasks";
 
+
 // 初期読込み
 loadTasks();
 
