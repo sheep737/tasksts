@@ -29,17 +29,6 @@ addBtn.addEventListener("click", () => {
   detailInput.blur();
 });
 
-const newBtn = document.getElementById("newBtn");
-
-newBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-
-  setTimeout(() => {
-    taskInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    taskInput.focus();
-  }, 50);
-});
-
 // タスク描画
 function addTask(task) {
   const li = document.createElement("li");
