@@ -1,3 +1,19 @@
+html, body {
+  height: 100%;
+  overflow: hidden; /* bodyはスクロールさせない */
+}
+
+#listWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  bottom: 220px; /* 入力欄の高さ */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   background: #f2f2f7;
