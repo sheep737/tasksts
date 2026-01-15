@@ -3,142 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>4 Color Cards Generator</title>
-
+<title>Color Card Generator for Yahoo</title>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
 <style>
-    body {
-        font-family: sans-serif;
-        padding: 20px;
-        background-color: #f4f7f9;
-        margin: 0;
-    }
+    body { font-family: sans-serif; padding: 15px; background: #f4f7f9; margin: 0; padding-bottom: 100px; }
+    .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .control-row { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: grid; grid-template-columns: 1fr 90px 45px; gap: 8px; align-items: center; }
+    .control-row h3 { grid-column: 1 / -1; margin: 0 0 5px 0; font-size: 12px; color: #888; }
+    input[type="text"] { width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .hex-input { font-family: monospace; text-transform: uppercase; }
+    input[type="color"] { width: 100%; height: 38px; border: 1px solid #ddd; border-radius: 4px; background: none; padding: 0; }
+    
+    .btn-area { position: sticky; top: 0; background: #f4f7f9; padding: 10px 0; z-index: 10; }
+    .download-btn { width: 100%; padding: 15px; font-size: 17px; font-weight: bold; color: white; background: #007AFF; border: none; border-radius: 8px; }
 
-    .controls {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
+    #capture-area { background: white; padding: 10px; display: inline-block; }
+    .card { width: 450px; height: 160px; padding: 25px; border-radius: 25px; margin-bottom: 20px; position: relative; box-sizing: border-box; text-align: left; border: 1px solid #eee; }
+    .label { position: absolute; bottom: 20px; left: 25px; font-weight: bold; font-size: 26px; line-height: 1.2em; }
+    .code { font-size: 20px; opacity: 0.8; font-weight: normal; }
 
-    .control-row {
-        background: #fff;
-        border-radius: 10px;
-        padding: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        display: grid;
-        grid-template-columns: 1fr 100px 50px;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .control-row h3 {
-        grid-column: 1 / -1;
-        margin: 0 0 5px 0;
-        font-size: 13px;
-        color: #888;
-    }
-
-    input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        font-size: 16px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-
-    .hex-input {
-        font-family: monospace;
-        text-transform: uppercase;
-    }
-
-    input[type="color"] {
-        width: 100%;
-        height: 38px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background: none;
-        cursor: pointer;
-        padding: 0;
-    }
-
-    .download-btn {
-        width: 100%;
-        padding: 15px;
-        font-size: 17px;
-        font-weight: bold;
-        color: white;
-        background-color: #007AFF;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-bottom: 20px;
-    }
-
-    #capture-area {
-        display: block;
-        text-align: center;
-        background-color: transparent;
-    }
-
-    .card {
-        width: 450px;
-        height: 160px;
-        padding: 25px;
-        border-radius: 25px;
-        margin: 0 auto 20px auto;
-        position: relative;
-        box-sizing: border-box;
-        text-align: left;
-        border: 1px solid #eee;
-    }
-
-    .label {
-        position: absolute;
-        bottom: 20px;
-        left: 25px;
-        font-weight: bold;
-        font-size: 26px;
-        line-height: 1.2em;
-    }
-
-    .code {
-        font-size: 20px;
-        opacity: 0.8;
-        font-weight: normal;
-    }
+    /* Yahoo保存用エリア */
+    #result-output { margin-top: 20px; text-align: center; border-top: 2px dashed #ccc; padding-top: 20px; display: none; }
+    #result-output img { max-width: 100%; border: 2px solid #007AFF; border-radius: 8px; }
+    .guide-msg { color: #007AFF; font-weight: bold; margin-bottom: 10px; }
 </style>
 </head>
-
 <body>
 
-<button class="download-btn" onclick="downloadImage()">画像をダウンロード</button>
+<div class="btn-area">
+    <button class="download-btn" onclick="generateImage()">保存用画像を作成する</button>
+</div>
 
 <div class="controls">
     <div class="control-row">
-        <h3>Card 1</h3>
-        <input id="label1" type="text" placeholder="名前 (自動)">
-        <input id="hex1" class="hex-input" type="text" placeholder="B9ECFF" maxlength="7" inputmode="email">
+        <h3>CARD 1</h3>
+        <input id="label1" type="text" placeholder="名前">
+        <input id="hex1" class="hex-input" type="text" placeholder="B9ECFF" maxlength="6" inputmode="email">
         <input id="color1" type="color" value="#ffffff">
     </div>
     <div class="control-row">
-        <h3>Card 2</h3>
-        <input id="label2" type="text" placeholder="名前 (自動)">
-        <input id="hex2" class="hex-input" type="text" placeholder="A8D8FF" maxlength="7" inputmode="email">
+        <h3>CARD 2</h3>
+        <input id="label2" type="text" placeholder="名前">
+        <input id="hex2" class="hex-input" type="text" placeholder="A8D8FF" maxlength="6" inputmode="email">
         <input id="color2" type="color" value="#ffffff">
     </div>
     <div class="control-row">
-        <h3>Card 3</h3>
-        <input id="label3" type="text" placeholder="名前 (自動)">
-        <input id="hex3" class="hex-input" type="text" placeholder="FFD0EC" maxlength="7" inputmode="email">
+        <h3>CARD 3</h3>
+        <input id="label3" type="text" placeholder="名前">
+        <input id="hex3" class="hex-input" type="text" placeholder="FFD0EC" maxlength="6" inputmode="email">
         <input id="color3" type="color" value="#ffffff">
     </div>
     <div class="control-row">
-        <h3>Card 4</h3>
-        <input id="label4" type="text" placeholder="名前 (自動)">
-        <input id="hex4" class="hex-input" type="text" placeholder="FFFFFF" maxlength="7" inputmode="email">
+        <h3>CARD 4</h3>
+        <input id="label4" type="text" placeholder="名前">
+        <input id="hex4" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
         <input id="color4" type="color" value="#ffffff">
     </div>
 </div>
@@ -150,12 +68,16 @@
     <div id="card4" class="card"><div class="label"><span id="ln4"></span><br><span id="lc4" class="code"></span></div></div>
 </div>
 
+<div id="result-output">
+    <p class="guide-msg">↓ 下の画像を長押しして保存してください ↓</p>
+    <div id="img-container"></div>
+</div>
+
 <script>
 const COLOR_NAMES = [
-  { name: "White", rgb: [255,255,255] }, { name: "Silver", rgb: [192,192,192] },
-  { name: "Sky Blue", rgb: [135,206,235] }, { name: "Mint Green", rgb: [189,252,201] },
-  { name: "Soft Pink", rgb: [255,192,203] }, { name: "Navy", rgb: [0,0,128] },
-  { name: "Black", rgb: [0,0,0] }, { name: "Orange", rgb: [255,165,0] }
+    { name: "White", rgb: [255,255,255] }, { name: "Silver", rgb: [192,192,192] },
+    { name: "Sky Blue", rgb: [135,206,235] }, { name: "Mint Green", rgb: [189,252,201] },
+    { name: "Pink", rgb: [255,192,203] }, { name: "Black", rgb: [0,0,0] }
 ];
 
 function hexToRgb(hex) {
@@ -168,15 +90,15 @@ function hexToRgb(hex) {
 function getClosestColorName(hex) {
     const [r, g, b] = hexToRgb(hex);
     let closest = "Color";
-    let minDistance = Infinity;
+    let minDist = Infinity;
     COLOR_NAMES.forEach(c => {
-        const d = Math.pow(r - c.rgb[0], 2) + Math.pow(g - c.rgb[1], 2) + Math.pow(b - c.rgb[2], 2);
-        if (d < minDistance) { minDistance = d; closest = c.name; }
+        const d = Math.pow(r-c.rgb[0],2) + Math.pow(g-c.rgb[1],2) + Math.pow(b-c.rgb[2],2);
+        if(d < minDist) { minDist = d; closest = c.name; }
     });
     return closest;
 }
 
-function syncAndUpdate(i, source) {
+function sync(i, source) {
     const hexInp = document.getElementById(`hex${i}`);
     const colorInp = document.getElementById(`color${i}`);
     const labelInp = document.getElementById(`label${i}`);
@@ -184,72 +106,49 @@ function syncAndUpdate(i, source) {
     const ln = document.getElementById(`ln${i}`);
     const lc = document.getElementById(`lc${i}`);
 
-    let inputVal = (source === 'picker' ? colorInp.value : hexInp.value).trim();
+    let val = (source === 'picker' ? colorInp.value : hexInp.value).trim();
+    if (source === 'hex' && val.length === 6 && !val.startsWith('#')) val = '#' + val;
+    if (!/^#[0-9A-Fa-f]{6}$/.test(val)) return;
 
-    // #がなくて6桁なら補完
-    if (source === 'hex' && !inputVal.startsWith('#') && inputVal.length === 6) {
-        inputVal = '#' + inputVal;
-    }
-    
-    // #がない場合に備えてバリデーション
-    const hexRegex = /^#[0-9A-Fa-f]{6}$/;
-    if (!hexRegex.test(inputVal)) {
-        if (inputVal === "") {
-            card.style.background = "transparent";
-            ln.textContent = ""; lc.textContent = "";
-        }
-        return;
-    }
-
-    if (source === 'picker') hexInp.value = inputVal.replace('#', '').toUpperCase();
-    if (source === 'hex') colorInp.value = inputVal;
+    if (source === 'picker') hexInp.value = val.replace('#','').toUpperCase();
+    if (source === 'hex') colorInp.value = val;
 
     if (!labelInp.dataset.manual || labelInp.value === "") {
-        labelInp.value = getClosestColorName(inputVal).toUpperCase();
+        labelInp.value = getClosestColorName(val).toUpperCase();
     }
 
-    card.style.background = inputVal;
+    card.style.background = val;
     card.style.border = "none";
     ln.textContent = labelInp.value;
-    lc.textContent = inputVal.toUpperCase();
+    lc.textContent = val.toUpperCase();
 
-    const [r, g, b] = hexToRgb(inputVal);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    card.style.color = brightness > 180 ? "#555" : "#fff";
+    const [r,g,b] = hexToRgb(val);
+    const bright = (r*299 + g*587 + b*114) / 1000;
+    card.style.color = bright > 180 ? "#555" : "#fff";
 }
 
 for (let i = 1; i <= 4; i++) {
-    const hexInp = document.getElementById(`hex${i}`);
-    const colorInp = document.getElementById(`color${i}`);
-    const labelInp = document.getElementById(`label${i}`);
-
-    hexInp.addEventListener("input", () => syncAndUpdate(i, 'hex'));
-    colorInp.addEventListener("input", () => syncAndUpdate(i, 'picker'));
-    labelInp.addEventListener("input", () => {
-        labelInp.dataset.manual = "true";
-        syncAndUpdate(i, 'hex');
+    document.getElementById(`hex${i}`).addEventListener("input", () => sync(i, 'hex'));
+    document.getElementById(`color${i}`).addEventListener("input", () => sync(i, 'picker'));
+    document.getElementById(`label${i}`).addEventListener("input", (e) => {
+        e.target.dataset.manual = "true";
+        sync(i, 'hex');
     });
 }
 
-function downloadImage() {
+function generateImage() {
     const area = document.getElementById("capture-area");
-    html2canvas(area, { 
-        backgroundColor: null, 
-        scale: 2,
-        logging: false,
-        useCORS: true 
-    }).then(canvas => {
-        try {
-            const dataUrl = canvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.href = dataUrl;
-            link.download = `color-palette-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) {
-            alert("ダウンロードに失敗しました。ブラウザの設定を確認してください。");
-        }
+    const output = document.getElementById("result-output");
+    const container = document.getElementById("img-container");
+    
+    html2canvas(area, { scale: 2, backgroundColor: null }).then(canvas => {
+        const img = new Image();
+        img.src = canvas.toDataURL("image/png");
+        container.innerHTML = "";
+        container.appendChild(img);
+        output.style.display = "block";
+        // 作成された場所へスクロール
+        output.scrollIntoView({ behavior: 'smooth' });
     });
 }
 </script>
