@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>4Color Cards Generator (Sync Mode)</title>
+<title>4 Color Cards Generator</title>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
@@ -44,13 +44,12 @@
     input[type="text"] {
         width: 100%;
         padding: 8px;
-        font-size: 16px; /* 16px以上にすることでiOSの自動ズームを防止 */
+        font-size: 16px;
         border: 1px solid #ddd;
         border-radius: 4px;
         box-sizing: border-box;
     }
 
-    /* 16進数入力欄の設定 */
     .hex-input {
         font-family: monospace;
         text-transform: uppercase;
@@ -79,13 +78,12 @@
         margin-bottom: 20px;
     }
 
-    .download-btn:active {
-        opacity: 0.7;
-    }
+    .download-btn:active { opacity: 0.7; }
 
     #capture-area {
         display: block;
         text-align: center;
+        min-height: 200px;
     }
 
     .card {
@@ -97,6 +95,8 @@
         position: relative;
         box-sizing: border-box;
         text-align: left;
+        border: 1px solid #eee; /* 未入力時に形が見えるように */
+        transition: background 0.3s;
     }
 
     .label {
@@ -123,67 +123,48 @@
 <div class="controls">
     <div class="control-row">
         <h3>Card 1</h3>
-        <input id="label1" type="text" placeholder="名前">
-        <input id="hex1" class="hex-input" type="text" value="#B9ECFF" maxlength="7" inputmode="url">
-        <input id="color1" type="color" value="#B9ECFF">
+        <input id="label1" type="text" placeholder="名前 (自動入力)">
+        <input id="hex1" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="color1" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 2</h3>
-        <input id="label2" type="text" placeholder="名前">
-        <input id="hex2" class="hex-input" type="text" value="#A8D8FF" maxlength="7" inputmode="url">
-        <input id="color2" type="color" value="#A8D8FF">
+        <input id="label2" type="text" placeholder="名前 (自動入力)">
+        <input id="hex2" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="color2" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 3</h3>
-        <input id="label3" type="text" placeholder="名前">
-        <input id="hex3" class="hex-input" type="text" value="#FFD0EC" maxlength="7" inputmode="url">
-        <input id="color3" type="color" value="#FFD0EC">
+        <input id="label3" type="text" placeholder="名前 (自動入力)">
+        <input id="hex3" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="color3" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 4</h3>
-        <input id="label4" type="text" placeholder="名前">
-        <input id="hex4" class="hex-input" type="text" value="#FFFFFF" maxlength="7" inputmode="url">
-        <input id="color4" type="color" value="#FFFFFF">
+        <input id="label4" type="text" placeholder="名前 (自動入力)">
+        <input id="hex4" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="color4" type="color" value="#ffffff">
     </div>
 </div>
 
 <div id="capture-area">
-    <div id="card1" class="card"><div class="label"><span></span><br><span class="code"></span></div></div>
-    <div id="card2" class="card"><div class="label"><span></span><br><span class="code"></span></div></div>
-    <div id="card3" class="card"><div class="label"><span></span><br><span class="code"></span></div></div>
-    <div id="card4" class="card"><div class="label"><span></span><br><span class="code"></span></div></div>
+    <div id="card1" class="card"><div class="label"><span id="ln1"></span><br><span id="lc1" class="code"></span></div></div>
+    <div id="card2" class="card"><div class="label"><span id="ln2"></span><br><span id="lc2" class="code"></span></div></div>
+    <div id="card3" class="card"><div class="label"><span id="ln3"></span><br><span id="lc3" class="code"></span></div></div>
+    <div id="card4" class="card"><div class="label"><span id="ln4"></span><br><span id="lc4" class="code"></span></div></div>
 </div>
 
 <script>
+// 色名リスト
 const COLOR_NAMES = [
-  { name: "White", rgb: [255,255,255] }, { name: "Snow", rgb: [255,250,250] },
-  { name: "Ivory", rgb: [255,255,240] }, { name: "Pearl", rgb: [250,249,246] },
-  { name: "Cream", rgb: [255,253,208] }, { name: "Beige", rgb: [245,245,220] },
-  { name: "Sand", rgb: [244,164,96] }, { name: "Taupe", rgb: [176,164,149] },
-  { name: "Light Gray", rgb: [211,211,211] }, { name: "Silver", rgb: [192,192,192] },
-  { name: "Ash Gray", rgb: [178,190,181] }, { name: "Charcoal", rgb: [54,69,79] },
-  { name: "Black", rgb: [0,0,0] }, { name: "Sky Blue", rgb: [135,206,235] },
-  { name: "Baby Blue", rgb: [137,207,240] }, { name: "Powder Blue", rgb: [176,224,230] },
-  { name: "Light Blue", rgb: [173,216,230] }, { name: "Ice Blue", rgb: [215,235,245] },
-  { name: "Aqua", rgb: [0,255,255] }, { name: "Turquoise", rgb: [64,224,208] },
-  { name: "Teal", rgb: [0,128,128] }, { name: "Cornflower Blue", rgb: [100,149,237] },
-  { name: "Royal Blue", rgb: [65,105,225] }, { name: "Navy", rgb: [0,0,128] },
-  { name: "Mint Green", rgb: [189,252,201] }, { name: "Seafoam Green", rgb: [159,226,191] },
-  { name: "Aqua Green", rgb: [127,255,212] }, { name: "Pistachio", rgb: [147,197,114] },
-  { name: "Light Green", rgb: [144,238,144] }, { name: "Apple Green", rgb: [141,182,0] },
-  { name: "Olive", rgb: [128,128,0] }, { name: "Forest Green", rgb: [34,139,34] },
-  { name: "Soft Pink", rgb: [255,192,203] }, { name: "Rose Pink", rgb: [255,182,193] },
-  { name: "Blush Pink", rgb: [255,228,225] }, { name: "Hot Pink", rgb: [255,105,180] },
-  { name: "Salmon", rgb: [250,128,114] }, { name: "Coral", rgb: [255,127,80] },
-  { name: "Red", rgb: [255,0,0] }, { name: "Burgundy", rgb: [128,0,32] },
-  { name: "Lavender", rgb: [230,230,250] }, { name: "Lilac", rgb: [200,162,200] },
-  { name: "Mauve", rgb: [224,176,255] }, { name: "Violet", rgb: [238,130,238] },
-  { name: "Purple", rgb: [128,0,128] }, { name: "Plum", rgb: [142,69,133] },
-  { name: "Ivory Yellow", rgb: [255,255,224] }, { name: "Lemon Yellow", rgb: [255,250,205] },
-  { name: "Mustard", rgb: [255,219,88] }, { name: "Peach", rgb: [255,218,185] },
-  { name: "Apricot", rgb: [251,206,177] }, { name: "Orange", rgb: [255,165,0] },
-  { name: "Light Brown", rgb: [181,101,29] }, { name: "Camel", rgb: [193,154,107] },
-  { name: "Chocolate", rgb: [123,63,0] }
+  { name: "White", rgb: [255,255,255] }, { name: "Black", rgb: [0,0,0] },
+  { name: "Silver", rgb: [192,192,192] }, { name: "Gray", rgb: [128,128,128] },
+  { name: "Charcoal", rgb: [54,69,79] }, { name: "Navy", rgb: [0,0,128] },
+  { name: "Sky Blue", rgb: [135,206,235] }, { name: "Mint Green", rgb: [189,252,201] },
+  { name: "Soft Pink", rgb: [255,192,203] }, { name: "Red", rgb: [255,0,0] },
+  { name: "Lemon Yellow", rgb: [255,250,205] }, { name: "Orange", rgb: [255,165,0] },
+  { name: "Beige", rgb: [245,245,220] }, { name: "Lavender", rgb: [230,230,250] },
+  { name: "Brown", rgb: [165,42,42] }
 ];
 
 function hexToRgb(hex) {
@@ -196,7 +177,7 @@ function hexToRgb(hex) {
 
 function getClosestColorName(hex) {
     const [r, g, b] = hexToRgb(hex);
-    let closest = "Custom Color";
+    let closest = "Color";
     let minDistance = Infinity;
     COLOR_NAMES.forEach(c => {
         const distance = Math.pow(r - c.rgb[0], 2) + Math.pow(g - c.rgb[1], 2) + Math.pow(b - c.rgb[2], 2);
@@ -213,35 +194,44 @@ function syncAndUpdate(i, source) {
     const colorInp = document.getElementById(`color${i}`);
     const labelInp = document.getElementById(`label${i}`);
     const card = document.getElementById(`card${i}`);
-    const spans = card.querySelectorAll("span");
+    const ln = document.getElementById(`ln${i}`);
+    const lc = document.getElementById(`lc${i}`);
 
     let color = source === 'picker' ? colorInp.value : hexInp.value;
 
-    // 16進数の形式が正しいかチェック
-    if (source === 'hex' && !/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+    // 未入力時はクリア表示
+    if (source === 'hex' && color === "") {
+        card.style.background = "transparent";
+        ln.textContent = "";
+        lc.textContent = "";
+        return;
+    }
 
-    // 入力同士を同期
+    // フォーマット補正（#がない場合など）
+    if (source === 'hex' && !color.startsWith('#') && color.length === 6) {
+        color = '#' + color;
+        hexInp.value = color;
+    }
+
+    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+
     if (source === 'picker') hexInp.value = color.toUpperCase();
     if (source === 'hex') colorInp.value = color;
 
-    // 名前欄が手動編集されていない、または空なら自動命名
     if (!labelInp.dataset.manual || labelInp.value === "") {
         labelInp.value = getClosestColorName(color).toUpperCase();
-        labelInp.dataset.manual = ""; // 一旦リセットを許可
     }
 
-    // 実際のカードへ反映
     card.style.background = color;
-    spans[0].textContent = labelInp.value;
-    spans[1].textContent = color.toUpperCase();
+    card.style.border = "none";
+    ln.textContent = labelInp.value;
+    lc.textContent = color.toUpperCase();
 
-    // 背景色に合わせて文字色（黒系/白）を判定
     const [r, g, b] = hexToRgb(color);
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     card.style.color = brightness > 180 ? "#555" : "#fff";
 }
 
-// 初期化とイベント登録
 for (let i = 1; i <= 4; i++) {
     const hexInp = document.getElementById(`hex${i}`);
     const colorInp = document.getElementById(`color${i}`);
@@ -252,18 +242,6 @@ for (let i = 1; i <= 4; i++) {
     labelInp.addEventListener("input", () => {
         labelInp.dataset.manual = "true";
         syncAndUpdate(i, 'hex');
-    });
-
-    // 初期反映
-    syncAndUpdate(i, 'hex');
-}
-
-function downloadImage() {
-    html2canvas(document.getElementById("capture-area"), { backgroundColor: null, scale: 2 }).then(canvas => {
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `color-palette-${Date.now()}.png`;
-        link.click();
     });
 }
 </script>
