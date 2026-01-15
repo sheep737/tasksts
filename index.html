@@ -38,7 +38,6 @@
         margin: 0 0 5px 0;
         font-size: 13px;
         color: #888;
-        text-transform: uppercase;
     }
 
     input[type="text"] {
@@ -71,19 +70,17 @@
         font-size: 17px;
         font-weight: bold;
         color: white;
-        background-color: #222;
+        background-color: #007AFF;
         border: none;
         border-radius: 8px;
         cursor: pointer;
         margin-bottom: 20px;
     }
 
-    .download-btn:active { opacity: 0.7; }
-
     #capture-area {
         display: block;
         text-align: center;
-        min-height: 200px;
+        background-color: transparent;
     }
 
     .card {
@@ -95,8 +92,7 @@
         position: relative;
         box-sizing: border-box;
         text-align: left;
-        border: 1px solid #eee; /* 未入力時に形が見えるように */
-        transition: background 0.3s;
+        border: 1px solid #eee;
     }
 
     .label {
@@ -123,26 +119,26 @@
 <div class="controls">
     <div class="control-row">
         <h3>Card 1</h3>
-        <input id="label1" type="text" placeholder="名前 (自動入力)">
-        <input id="hex1" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="label1" type="text" placeholder="名前 (自動)">
+        <input id="hex1" class="hex-input" type="text" placeholder="B9ECFF" maxlength="7" inputmode="email">
         <input id="color1" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 2</h3>
-        <input id="label2" type="text" placeholder="名前 (自動入力)">
-        <input id="hex2" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="label2" type="text" placeholder="名前 (自動)">
+        <input id="hex2" class="hex-input" type="text" placeholder="A8D8FF" maxlength="7" inputmode="email">
         <input id="color2" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 3</h3>
-        <input id="label3" type="text" placeholder="名前 (自動入力)">
-        <input id="hex3" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="label3" type="text" placeholder="名前 (自動)">
+        <input id="hex3" class="hex-input" type="text" placeholder="FFD0EC" maxlength="7" inputmode="email">
         <input id="color3" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>Card 4</h3>
-        <input id="label4" type="text" placeholder="名前 (自動入力)">
-        <input id="hex4" class="hex-input" type="text" placeholder="#HEX" maxlength="7" inputmode="url">
+        <input id="label4" type="text" placeholder="名前 (自動)">
+        <input id="hex4" class="hex-input" type="text" placeholder="FFFFFF" maxlength="7" inputmode="email">
         <input id="color4" type="color" value="#ffffff">
     </div>
 </div>
@@ -155,20 +151,14 @@
 </div>
 
 <script>
-// 色名リスト
 const COLOR_NAMES = [
-  { name: "White", rgb: [255,255,255] }, { name: "Black", rgb: [0,0,0] },
-  { name: "Silver", rgb: [192,192,192] }, { name: "Gray", rgb: [128,128,128] },
-  { name: "Charcoal", rgb: [54,69,79] }, { name: "Navy", rgb: [0,0,128] },
+  { name: "White", rgb: [255,255,255] }, { name: "Silver", rgb: [192,192,192] },
   { name: "Sky Blue", rgb: [135,206,235] }, { name: "Mint Green", rgb: [189,252,201] },
-  { name: "Soft Pink", rgb: [255,192,203] }, { name: "Red", rgb: [255,0,0] },
-  { name: "Lemon Yellow", rgb: [255,250,205] }, { name: "Orange", rgb: [255,165,0] },
-  { name: "Beige", rgb: [245,245,220] }, { name: "Lavender", rgb: [230,230,250] },
-  { name: "Brown", rgb: [165,42,42] }
+  { name: "Soft Pink", rgb: [255,192,203] }, { name: "Navy", rgb: [0,0,128] },
+  { name: "Black", rgb: [0,0,0] }, { name: "Orange", rgb: [255,165,0] }
 ];
 
 function hexToRgb(hex) {
-    if(!/^#([0-9A-Fa-f]{6})$/i.test(hex)) return [255,255,255];
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
@@ -180,11 +170,8 @@ function getClosestColorName(hex) {
     let closest = "Color";
     let minDistance = Infinity;
     COLOR_NAMES.forEach(c => {
-        const distance = Math.pow(r - c.rgb[0], 2) + Math.pow(g - c.rgb[1], 2) + Math.pow(b - c.rgb[2], 2);
-        if (distance < minDistance) {
-            minDistance = distance;
-            closest = c.name;
-        }
+        const d = Math.pow(r - c.rgb[0], 2) + Math.pow(g - c.rgb[1], 2) + Math.pow(b - c.rgb[2], 2);
+        if (d < minDistance) { minDistance = d; closest = c.name; }
     });
     return closest;
 }
@@ -197,37 +184,36 @@ function syncAndUpdate(i, source) {
     const ln = document.getElementById(`ln${i}`);
     const lc = document.getElementById(`lc${i}`);
 
-    let color = source === 'picker' ? colorInp.value : hexInp.value;
+    let inputVal = (source === 'picker' ? colorInp.value : hexInp.value).trim();
 
-    // 未入力時はクリア表示
-    if (source === 'hex' && color === "") {
-        card.style.background = "transparent";
-        ln.textContent = "";
-        lc.textContent = "";
+    // #がなくて6桁なら補完
+    if (source === 'hex' && !inputVal.startsWith('#') && inputVal.length === 6) {
+        inputVal = '#' + inputVal;
+    }
+    
+    // #がない場合に備えてバリデーション
+    const hexRegex = /^#[0-9A-Fa-f]{6}$/;
+    if (!hexRegex.test(inputVal)) {
+        if (inputVal === "") {
+            card.style.background = "transparent";
+            ln.textContent = ""; lc.textContent = "";
+        }
         return;
     }
 
-    // フォーマット補正（#がない場合など）
-    if (source === 'hex' && !color.startsWith('#') && color.length === 6) {
-        color = '#' + color;
-        hexInp.value = color;
-    }
-
-    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return;
-
-    if (source === 'picker') hexInp.value = color.toUpperCase();
-    if (source === 'hex') colorInp.value = color;
+    if (source === 'picker') hexInp.value = inputVal.replace('#', '').toUpperCase();
+    if (source === 'hex') colorInp.value = inputVal;
 
     if (!labelInp.dataset.manual || labelInp.value === "") {
-        labelInp.value = getClosestColorName(color).toUpperCase();
+        labelInp.value = getClosestColorName(inputVal).toUpperCase();
     }
 
-    card.style.background = color;
+    card.style.background = inputVal;
     card.style.border = "none";
     ln.textContent = labelInp.value;
-    lc.textContent = color.toUpperCase();
+    lc.textContent = inputVal.toUpperCase();
 
-    const [r, g, b] = hexToRgb(color);
+    const [r, g, b] = hexToRgb(inputVal);
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     card.style.color = brightness > 180 ? "#555" : "#fff";
 }
@@ -242,6 +228,28 @@ for (let i = 1; i <= 4; i++) {
     labelInp.addEventListener("input", () => {
         labelInp.dataset.manual = "true";
         syncAndUpdate(i, 'hex');
+    });
+}
+
+function downloadImage() {
+    const area = document.getElementById("capture-area");
+    html2canvas(area, { 
+        backgroundColor: null, 
+        scale: 2,
+        logging: false,
+        useCORS: true 
+    }).then(canvas => {
+        try {
+            const dataUrl = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `color-palette-${Date.now()}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            alert("ダウンロードに失敗しました。ブラウザの設定を確認してください。");
+        }
     });
 }
 </script>
