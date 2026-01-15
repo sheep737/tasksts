@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>4Color Card Generator (Fixed)</title>
+<title>Color Card Gen (Transparent PNG)</title>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
     body { font-family: sans-serif; padding: 15px; background: #f4f7f9; margin: 0; padding-bottom: 100px; }
@@ -17,44 +17,55 @@
     .btn-area { position: sticky; top: 0; background: #f4f7f9; padding: 10px 0; z-index: 10; }
     .download-btn { width: 100%; padding: 15px; font-size: 17px; font-weight: bold; color: white; background: #007AFF; border: none; border-radius: 8px; cursor: pointer; }
 
-    #capture-area { background: white; padding: 10px; display: inline-block; }
-    .card { width: 450px; height: 160px; padding: 25px; border-radius: 25px; margin-bottom: 20px; position: relative; box-sizing: border-box; text-align: left; border: 1px solid #eee; }
+    /* 画像になるエリア：背景を完全に透明に設定 */
+    #capture-area { background: transparent; padding: 10px; display: inline-block; }
+    .card { width: 450px; height: 160px; padding: 25px; border-radius: 25px; margin-bottom: 20px; position: relative; box-sizing: border-box; text-align: left; border: 1px solid rgba(0,0,0,0.05); }
     .label { position: absolute; bottom: 20px; left: 25px; font-weight: bold; font-size: 26px; line-height: 1.2em; }
     .code { font-size: 20px; opacity: 0.8; font-weight: normal; }
 
+    /* 保存用出力エリア：透明であることを確認しやすくするためにチェック柄の背景を敷いています */
     #result-output { margin-top: 20px; text-align: center; border-top: 2px dashed #ccc; padding-top: 20px; display: none; }
-    #result-output img { max-width: 100%; border: 2px solid #007AFF; border-radius: 8px; }
+    #result-output img { 
+        max-width: 100%; 
+        border: 2px solid #007AFF; 
+        border-radius: 8px;
+        /* 透明確認用の市松模様（画像自体には入りません） */
+        background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%), 
+                          linear-gradient(45deg, #eee 25%, white 25%, white 75%, #eee 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+    }
     .guide-msg { color: #007AFF; font-weight: bold; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
 <div class="btn-area">
-    <button class="download-btn" onclick="generateImage()">保存用画像を作成する</button>
+    <button class="download-btn" onclick="generateImage()">透明な画像を作成する</button>
 </div>
 
 <div class="controls">
     <div class="control-row">
         <h3>CARD 1</h3>
-        <input id="label1" type="text" placeholder="名前を自由に入力" onfocus="this.dataset.manual='true'">
-        <input id="hex1" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
+        <input id="label1" type="text" placeholder="名前" onfocus="this.dataset.manual='true'">
+        <input id="hex1" class="hex-input" type="text" placeholder="B9ECFF" maxlength="6" inputmode="email">
         <input id="color1" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>CARD 2</h3>
-        <input id="label2" type="text" placeholder="名前を自由に入力" onfocus="this.dataset.manual='true'">
-        <input id="hex2" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
+        <input id="label2" type="text" placeholder="名前" onfocus="this.dataset.manual='true'">
+        <input id="hex2" class="hex-input" type="text" placeholder="A8D8FF" maxlength="6" inputmode="email">
         <input id="color2" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>CARD 3</h3>
-        <input id="label3" type="text" placeholder="名前を自由に入力" onfocus="this.dataset.manual='true'">
-        <input id="hex3" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
+        <input id="label3" type="text" placeholder="名前" onfocus="this.dataset.manual='true'">
+        <input id="hex3" class="hex-input" type="text" placeholder="FFD0EC" maxlength="6" inputmode="email">
         <input id="color3" type="color" value="#ffffff">
     </div>
     <div class="control-row">
         <h3>CARD 4</h3>
-        <input id="label4" type="text" placeholder="名前を自由に入力" onfocus="this.dataset.manual='true'">
+        <input id="label4" type="text" placeholder="名前" onfocus="this.dataset.manual='true'">
         <input id="hex4" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
         <input id="color4" type="color" value="#ffffff">
     </div>
@@ -68,11 +79,12 @@
 </div>
 
 <div id="result-output">
-    <p class="guide-msg">↓ 下の画像を長押しして保存してください ↓</p>
+    <p class="guide-msg">↓ 下の画像を長押しして保存してください ↓<br>(背景は透明になります)</p>
     <div id="img-container"></div>
 </div>
 
 <script>
+// 色名判定ロジック
 const COLOR_NAMES = [
     { name: "White", rgb: [255,255,255] }, { name: "Silver", rgb: [192,192,192] },
     { name: "Sky Blue", rgb: [135,206,235] }, { name: "Mint Green", rgb: [189,252,201] },
@@ -109,30 +121,22 @@ function sync(i, source) {
     let val = (source === 'picker' ? colorInp.value : hexInp.value).trim();
     if (source === 'hex' && val.length === 6 && !val.startsWith('#')) val = '#' + val;
     
-    const isValid = /^#[0-9A-Fa-f]{6}$/.test(val);
-
-    if (isValid) {
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
         if (source === 'picker') hexInp.value = val.replace('#','').toUpperCase();
         if (source === 'hex') colorInp.value = val;
-        
-        // 自動命名のロジックを修正
-        if (labelInp.dataset.manual !== "true") {
-            labelInp.value = getClosestColorName(val).toUpperCase();
-        }
+        if (labelInp.dataset.manual !== "true") labelInp.value = getClosestColorName(val).toUpperCase();
 
         card.style.background = val;
         card.style.border = "none";
         lc.textContent = val.toUpperCase();
-        
         const [r,g,b] = hexToRgb(val);
         const bright = (r*299 + g*587 + b*114) / 1000;
         card.style.color = bright > 180 ? "#555" : "#fff";
     } else if (val === "") {
         card.style.background = "transparent";
+        card.style.border = "1px solid #eee";
         lc.textContent = "";
     }
-
-    // 名前（ラベル）はisValidに関係なく、入力されているものをそのまま表示
     ln.textContent = labelInp.value;
 }
 
@@ -140,13 +144,10 @@ for (let i = 1; i <= 4; i++) {
     document.getElementById(`hex${i}`).addEventListener("input", () => sync(i, 'hex'));
     document.getElementById(`color${i}`).addEventListener("input", () => sync(i, 'picker'));
     document.getElementById(`label${i}`).addEventListener("input", (e) => {
-        e.target.dataset.manual = "true"; // 文字を打ち始めたら手動モード
+        e.target.dataset.manual = "true";
         sync(i, 'hex');
     });
-    // クリック（タップ）しただけでも自動入力を解除するように
-    document.getElementById(`label${i}`).addEventListener("click", (e) => {
-        e.target.dataset.manual = "true";
-    });
+    document.getElementById(`label${i}`).addEventListener("click", (e) => e.target.dataset.manual = "true");
 }
 
 function generateImage() {
@@ -154,7 +155,12 @@ function generateImage() {
     const output = document.getElementById("result-output");
     const container = document.getElementById("img-container");
     
-    html2canvas(area, { scale: 2, backgroundColor: null }).then(canvas => {
+    // 背景を透明(null)にしてキャプチャ
+    html2canvas(area, { 
+        scale: 2, 
+        backgroundColor: null,
+        logging: false
+    }).then(canvas => {
         const img = new Image();
         img.src = canvas.toDataURL("image/png");
         container.innerHTML = "";
