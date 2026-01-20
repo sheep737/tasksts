@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.5</title>
+<title>ver 5.3.6</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -35,8 +35,8 @@ const ball={
   vx:0,vy:0,
   moving:false,
   inHole:false,
-  holeTime:0,
-  alpha:1
+  holeFalling:false,
+  holeTime:0
 };
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
@@ -81,9 +81,9 @@ ball.x=80;
 ball.y=H*s.gY-ball.baseR-20;
 ball.vx=ball.vy=0;
 ball.r=ball.baseR;
-ball.alpha=1;
 ball.moving=false;
 ball.inHole=false;
+ball.holeFalling=false;
 ball.holeTime=0;
 stName.textContent=s.name;
 stHint.textContent=s.hint;
@@ -124,13 +124,12 @@ const gY=H*s.gY;
 let hW=s.hW+(s.dynHole?Math.sin(gameTime*.07)*25:0);
 const hL=W*s.hX-hW/2;
 const holeCX=hL+hW/2;
-const holeCY=gY+10;
 
 /* ===== 地面 & 穴 ===== */
 ctx.fillStyle="#10b981";
 ctx.fillRect(0,gY,W,H-gY);
 ctx.fillStyle="#000";
-ctx.fillRect(hL,gY,hW,100);
+ctx.fillRect(hL,gY,hW,200);
 
 /* ===== 障害物 ===== */
 s.obs.forEach(o=>{
@@ -179,16 +178,18 @@ o.prevOx=ox;
 
 });
 
-/* ===== 物理 ===== */
-if(ball.moving && !ball.inHole){
+/* ===== 通常物理 ===== */
+if(ball.moving && !ball.holeFalling){
 ball.vy+=0.5;
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
 if(ball.y+ball.r>gY){
 if(ball.x>hL+ball.r*0.4 && ball.x<hL+hW-ball.r*0.4){
+ball.holeFalling=true;
 ball.inHole=true;
-ball.vx=ball.vy=0;
+ball.vx=0;
+ball.vy=2;
 }else{
 ball.y=gY-ball.r;
 ball.vy*=-0.3;
@@ -197,16 +198,15 @@ ball.vx*=0.8;
 }
 }
 
-/* ===== 吸い込み演出 ===== */
-if(ball.inHole){
+/* ===== 穴へ落下 ===== */
+if(ball.holeFalling){
 ball.holeTime++;
-ball.x+=(holeCX-ball.x)*0.15;
-ball.y+=(holeCY-ball.y)*0.15;
-ball.r*=0.94;
-ball.alpha*=0.92;
+ball.x+=(holeCX-ball.x)*0.1;
+ball.vy+=1.2;
+ball.y+=ball.vy;
 }
 
-/* ===== 予測線（復活） ===== */
+/* ===== 予測線 ===== */
 if(touch.active && !ball.moving){
 ctx.beginPath();
 ctx.setLineDash([6,6]);
@@ -222,18 +222,16 @@ ctx.setLineDash([]);
 }
 
 /* ===== ボール描画 ===== */
-ctx.globalAlpha=ball.alpha;
 ctx.beginPath();
-ctx.arc(ball.x,ball.y,Math.max(0,ball.r),0,Math.PI*2);
+ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fillStyle="white";
 ctx.fill();
 ctx.strokeStyle="black";
 ctx.lineWidth=2;
 ctx.stroke();
-ctx.globalAlpha=1;
 
 /* ===== ステージ遷移 ===== */
-if(ball.inHole && ball.holeTime>35){
+if(ball.holeFalling && ball.y>H+60){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
 }
