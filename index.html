@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.6</title>
+<title>ver 5.5.0</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -25,8 +25,8 @@ canvas{display:block}
 </div>
 
 <script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("gameCanvas");
+const ctx=canvas.getContext("2d");
 
 let W,H,gameTime=0,currentStage=0;
 const stages=[];
@@ -34,43 +34,53 @@ const ball={
   x:0,y:0,r:13,baseR:13,
   vx:0,vy:0,
   moving:false,
-  inHole:false,
-  holeFalling:false,
-  holeTime:0
+  holeFalling:false
 };
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
-/* ===== ユーティリティ ===== */
+/* ===== Utility ===== */
 function circleRectHit(cx,cy,cr,rx,ry,rw,rh){
   const nx=Math.max(rx,Math.min(cx,rx+rw));
   const ny=Math.max(ry,Math.min(cy,ry+rh));
   return Math.hypot(cx-nx,cy-ny)<=cr;
 }
 
-/* ===== ステージ生成 ===== */
+/* ===== Stage Create ===== */
 function createStages(){
 stages.length=0;
 for(let i=1;i<=20;i++){
 const s={
-name:`STAGE ${i}`,
-hint:"穴へ落とそう",
-hX:0.8,
-hW:Math.max(40,85-i*2),
-gY:0.8,
-dynHole:i%7===0,
-obs:[]
+ name:`STAGE ${i}`,
+ hint:
+  i<4?"狙って打つ":
+  i<7?"待て":
+  i<11?"動きを読む":
+  i<15?"焦るな":
+  "判断しろ",
+ hX:.75,
+ hW:Math.max(50,90-i*2),
+ gY:.8,
+ dynHole:i%6===0,
+ obs:[]
 };
-if(i===1) s.obs.push({t:"block",x:.5,y:.55,w:30,h:200});
-else if(i===5) s.obs.push({t:"move",x:.25,y:.6,w:140,h:22,r:120,s:1.5});
-else{
-if(i%3===0) s.obs.push({t:"move",x:.25,y:.55,w:120,h:20,r:160,s:1+i*.15});
+
+/* 基本障害物 */
 if(i%2===0) s.obs.push({t:"block",x:.55,y:.5,w:40,h:180});
-}
+if(i%3===0) s.obs.push({t:"move",x:.25,y:.6,w:130,h:20,r:140,s:1+.1*i});
+
+/* blink導入 */
+if(i>=3 && i<=8)
+ s.obs.push({t:"blink",x:.35,y:.6,w:160,h:18,p:90});
+if(i>=9 && i<=14)
+ s.obs.push({t:"blink",x:.45,y:.55,w:140,h:18,p:70});
+if(i>=15)
+ s.obs.push({t:"blink",x:.3,y:.55,w:120,h:18,p:50});
+
 stages.push(s);
 }
 }
 
-/* ===== 初期化 ===== */
+/* ===== Init ===== */
 function resize(){
 W=innerWidth;H=innerHeight;
 canvas.width=W;canvas.height=H;
@@ -80,16 +90,13 @@ const s=stages[currentStage];
 ball.x=80;
 ball.y=H*s.gY-ball.baseR-20;
 ball.vx=ball.vy=0;
-ball.r=ball.baseR;
 ball.moving=false;
-ball.inHole=false;
 ball.holeFalling=false;
-ball.holeTime=0;
 stName.textContent=s.name;
 stHint.textContent=s.hint;
 }
 
-/* ===== 入力 ===== */
+/* ===== Input ===== */
 addEventListener("touchstart",e=>{
 if(!ball.moving){
 touch.active=true;
@@ -113,7 +120,7 @@ ball.moving=true;
 touch.active=false;
 }});
 
-/* ===== メインループ ===== */
+/* ===== Loop ===== */
 function loop(){
 gameTime++;
 ctx.fillStyle="#0f172a";
@@ -121,116 +128,112 @@ ctx.fillRect(0,0,W,H);
 
 const s=stages[currentStage];
 const gY=H*s.gY;
-let hW=s.hW+(s.dynHole?Math.sin(gameTime*.07)*25:0);
+const hW=s.hW+(s.dynHole?Math.sin(gameTime*.07)*25:0);
 const hL=W*s.hX-hW/2;
 const holeCX=hL+hW/2;
 
-/* ===== 地面 & 穴 ===== */
+/* Ground */
 ctx.fillStyle="#10b981";
 ctx.fillRect(0,gY,W,H-gY);
 ctx.fillStyle="#000";
 ctx.fillRect(hL,gY,hW,200);
 
-/* ===== 障害物 ===== */
+/* Obstacles */
 s.obs.forEach(o=>{
 
-/* --- block --- */
 if(o.t==="block"){
-const x=o.x*W,y=o.y*H,w=o.w,h=o.h;
+const x=o.x*W,y=o.y*H;
 ctx.fillStyle="#475569";
-ctx.fillRect(x,y,w,h);
-
-if(circleRectHit(ball.x,ball.y,ball.r,x,y,w,h)){
-const prevY=ball.y-ball.vy;
-if(prevY+ball.r<=y+6){
-ball.y=y-ball.r;
-ball.vy=0;
-ball.vx*=0.85;
-}else{
-if(ball.x<x) ball.x=x-ball.r;
-if(ball.x>x+w) ball.x=x+w+ball.r;
-ball.vx*=0.3;
+ctx.fillRect(x,y,o.w,o.h);
+if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
+const py=ball.y-ball.vy;
+if(py+ball.r<=y+6){
+ball.y=y-ball.r; ball.vy=0; ball.vx*=0.85;
 }
 }
 }
 
-/* --- move --- */
 if(o.t==="move"){
-const baseX=o.x*W, baseY=o.y*H;
+const bx=o.x*W,by=o.y*H;
 const ox=Math.sin(gameTime*0.02*o.s)*o.r;
-const x=baseX+ox, y=baseY;
-
+const x=bx+ox,y=by;
 ctx.fillStyle="#22c55e";
 ctx.fillRect(x,y,o.w,o.h);
-
 if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
-const prevY=ball.y-ball.vy;
-if(prevY+ball.r<=y+6){
-ball.y=y-ball.r;
-ball.vy=0;
+const py=ball.y-ball.vy;
+if(py+ball.r<=y+6){
+ball.y=y-ball.r; ball.vy=0;
 ball.x+=ox-(o.prevOx||0);
-}else{
-ball.vx*=0.2;
 }
 }
 o.prevOx=ox;
 }
 
+if(o.t==="blink"){
+const x=o.x*W,y=o.y*H;
+const on=Math.floor(gameTime/o.p)%2===0;
+if(on){
+ctx.fillStyle="#38bdf8";
+ctx.fillRect(x,y,o.w,o.h);
+if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
+const py=ball.y-ball.vy;
+if(py+ball.r<=y+6){
+ball.y=y-ball.r; ball.vy=0; ball.vx*=0.9;
+}
+}
+}else{
+ctx.strokeStyle="rgba(255,255,255,.25)";
+ctx.setLineDash([6,6]);
+ctx.strokeRect(x,y,o.w,o.h);
+ctx.setLineDash([]);
+}
+}
+
 });
 
-/* ===== 通常物理 ===== */
+/* Physics */
 if(ball.moving && !ball.holeFalling){
 ball.vy+=0.5;
 ball.x+=ball.vx;
 ball.y+=ball.vy;
-
 if(ball.y+ball.r>gY){
-if(ball.x>hL+ball.r*0.4 && ball.x<hL+hW-ball.r*0.4){
+if(ball.x>hL+ball.r*.4 && ball.x<hL+hW-ball.r*.4){
 ball.holeFalling=true;
-ball.inHole=true;
-ball.vx=0;
-ball.vy=2;
+ball.vx=0; ball.vy=2;
 }else{
 ball.y=gY-ball.r;
-ball.vy*=-0.3;
-ball.vx*=0.8;
+ball.vy*=-.3; ball.vx*=.8;
 }
 }
 }
 
-/* ===== 穴へ落下 ===== */
+/* Hole fall */
 if(ball.holeFalling){
-ball.holeTime++;
 ball.x+=(holeCX-ball.x)*0.1;
 ball.vy+=1.2;
 ball.y+=ball.vy;
 }
 
-/* ===== 予測線 ===== */
+/* Aim line */
 if(touch.active && !ball.moving){
-ctx.beginPath();
 ctx.setLineDash([6,6]);
-ctx.strokeStyle="rgba(255,255,255,0.8)";
-ctx.lineWidth=2;
+ctx.strokeStyle="rgba(255,255,255,.8)";
+ctx.beginPath();
 ctx.moveTo(ball.x,ball.y);
-ctx.lineTo(
-  ball.x+(touch.sx-touch.cx),
-  ball.y+(touch.sy-touch.cy)
-);
+ctx.lineTo(ball.x+(touch.sx-touch.cx),ball.y+(touch.sy-touch.cy));
 ctx.stroke();
 ctx.setLineDash([]);
 }
 
-/* ===== ボール描画 ===== */
+/* Ball */
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fillStyle="white";
 ctx.fill();
 ctx.strokeStyle="black";
-ctx.lineWidth=2;
 ctx.stroke();
 
-/* ===== ステージ遷移 ===== */
+/* Next */
 if(ball.holeFalling && ball.y>H+60){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
@@ -239,7 +242,7 @@ resetStage();
 requestAnimationFrame(loop);
 }
 
-/* ===== 起動 ===== */
+/* Start */
 createStages();
 addEventListener("resize",resize);
 resize();
