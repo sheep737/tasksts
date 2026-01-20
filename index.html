@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.2</title>
+<title>ver 5.3.3</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -31,11 +31,12 @@ const ctx = canvas.getContext("2d");
 let W,H,gameTime=0,currentStage=0;
 const stages=[];
 const ball={
-  x:0,y:0,r:13,
+  x:0,y:0,r:13,baseR:13,
   vx:0,vy:0,
   moving:false,
   inHole:false,
-  holeTime:0
+  holeTime:0,
+  alpha:1
 };
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
@@ -75,8 +76,10 @@ resetStage();
 function resetStage(){
 const s=stages[currentStage];
 ball.x=80;
-ball.y=H*s.gY-ball.r-20;
+ball.y=H*s.gY-ball.baseR-20;
 ball.vx=ball.vy=0;
+ball.r=ball.baseR;
+ball.alpha=1;
 ball.moving=false;
 ball.inHole=false;
 ball.holeTime=0;
@@ -116,6 +119,9 @@ const s=stages[currentStage];
 const gY=H*s.gY;
 let hW=s.hW+(s.dynHole?Math.sin(gameTime*.07)*25:0);
 const hL=W*s.hX-hW/2;
+const holeCX=hL+hW/2;
+const holeCY=gY+10;
+
 let curG=.5;
 
 ctx.fillStyle="#10b981";
@@ -130,74 +136,9 @@ ctx.fillStyle="rgba(56,189,248,.15)";
 ctx.fillRect(x,y,w,h);
 if(ball.x>x&&ball.x<x+w&&ball.y>y&&ball.y<y+h)curG=.15;
 }
-
-if(o.t==="warp"){
-ctx.beginPath();
-ctx.arc(o.x*W,o.y*H,25,0,Math.PI*2);
-ctx.strokeStyle="#38bdf8";
-ctx.lineWidth=2;
-ctx.stroke();
-if(!ball.inHole && Math.hypot(ball.x-o.x*W,ball.y-o.y*H)<25){
-ball.x=o.tx*W;
-ball.y=o.ty*H;
-}
-}
-
-if(o.t==="accel"){
-ctx.fillStyle="#facc15";
-ctx.fillRect(o.x*W,gY-6,o.w,6);
-if(!ball.inHole && ball.x>o.x*W&&ball.x<o.x*W+o.w&&Math.abs(ball.y+ball.r-gY)<12){
-ball.vx+=o.p*Math.sign(ball.vx||1);
-}
-}
-
-if(o.t==="block"||o.t==="move"){
-if(o.t==="move"){
-o.cX=(o.cX??o.x*W)+(o.d??1)*o.s;
-if(o.cX>o.x*W+o.r||o.cX<o.x*W)o.d=(o.d??1)*-1;
-}
-const bx=o.t==="move"?o.cX:o.x*W;
-const by=o.y*H;
-ctx.fillStyle="#64748b";
-ctx.fillRect(bx,by,o.w,o.h);
-if(!ball.inHole && ball.x+ball.r>bx&&ball.x-ball.r<bx+o.w&&ball.y+ball.r>by&&ball.y-ball.r<by+o.h){
-ball.vx*=-.7;ball.vy*=-.7;
-}
-}
-
-if(o.t==="rot"){
-o.a=(o.a||0)+o.s;
-const x1=o.x*W,y1=o.y*H;
-const x2=x1+Math.cos(o.a)*o.l;
-const y2=y1+Math.sin(o.a)*o.l;
-ctx.strokeStyle="#fbbf24";
-ctx.lineWidth=8;
-ctx.beginPath();
-ctx.moveTo(x1,y1);
-ctx.lineTo(x2,y2);
-ctx.stroke();
-const dx=x2-x1,dy=y2-y1;
-const t=Math.max(0,Math.min(1,((ball.x-x1)*dx+(ball.y-y1)*dy)/(dx*dx+dy*dy)));
-if(!ball.inHole && Math.hypot(ball.x-(x1+t*dx),ball.y-(y1+t*dy))<ball.r){
-ball.vx*=-1.1;ball.vy*=-1.1;
-}
-}
-
-if(o.t==="spike"){
-ctx.fillStyle="#ef4444";
-for(let j=0;j<o.w;j+=20){
-ctx.beginPath();
-ctx.moveTo(o.x*W+j,gY);
-ctx.lineTo(o.x*W+j+10,gY-20);
-ctx.lineTo(o.x*W+j+20,gY);
-ctx.fill();
-}
-if(!ball.inHole && ball.x>o.x*W&&ball.x<o.x*W+o.w&&ball.y+ball.r>gY-5){
-resetStage();
-}
-}
 });
 
+/* ===== 物理 ===== */
 if(ball.moving && !ball.inHole){
 ball.vy+=curG;
 ball.x+=ball.vx;
@@ -206,8 +147,7 @@ ball.y+=ball.vy;
 if(ball.y+ball.r>gY){
 if(ball.x>hL&&ball.x<hL+hW){
 ball.inHole=true;
-ball.vx=0;
-ball.vy=0;
+ball.vx=ball.vy=0;
 }else{
 ball.y=gY-ball.r;
 ball.vy*=-.3;
@@ -216,34 +156,31 @@ ball.vx*=.8;
 }
 }
 
+/* ===== 吸い込み演出 ===== */
 if(ball.inHole){
 ball.holeTime++;
+
+ball.x += (holeCX-ball.x)*0.15;
+ball.y += (holeCY-ball.y)*0.15;
+ball.r *= 0.94;
+ball.alpha *= 0.92;
 }
 
-if(touch.active){
-ctx.setLineDash([5,5]);
-ctx.strokeStyle="white";
+/* ===== 描画 ===== */
+ctx.globalAlpha=ball.alpha;
 ctx.beginPath();
-ctx.moveTo(ball.x,ball.y);
-ctx.lineTo(ball.x+(touch.sx-touch.cx)*.6,ball.y+(touch.sy-touch.cy)*.6);
-ctx.stroke();
-ctx.setLineDash([]);
-}
-
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+ctx.arc(ball.x,ball.y,Math.max(0,ball.r),0,Math.PI*2);
 ctx.fillStyle="white";
 ctx.fill();
 ctx.strokeStyle="black";
 ctx.lineWidth=2;
 ctx.stroke();
+ctx.globalAlpha=1;
 
-if(ball.inHole && ball.holeTime>40){
+if(ball.inHole && ball.holeTime>35){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
 }
-
-if(ball.x<-50||ball.x>W+50||ball.y>H+80) resetStage();
 
 requestAnimationFrame(loop);
 }
