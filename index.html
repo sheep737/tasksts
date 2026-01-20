@@ -1,146 +1,165 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Color Card Gen Pro</title>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<style>
-    body { font-family: sans-serif; padding: 15px; background: #f4f7f9; margin: 0; padding-bottom: 100px; }
-    .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    .control-row { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: grid; grid-template-columns: 1fr 90px 45px; gap: 8px; align-items: center; }
-    .control-row h3 { grid-column: 1 / -1; margin: 0 0 5px 0; font-size: 12px; color: #888; }
-    input[type="text"] { width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .hex-input { font-family: monospace; text-transform: uppercase; }
-    input[type="color"] { width: 100%; height: 38px; border: 1px solid #ddd; border-radius: 4px; background: none; padding: 0; cursor: pointer; }
-    
-    .btn-area { position: sticky; top: 0; background: #f4f7f9; padding: 10px 0; z-index: 10; }
-    .download-btn { width: 100%; padding: 15px; font-size: 17px; font-weight: bold; color: white; background: #007AFF; border: none; border-radius: 8px; cursor: pointer; }
-
-    #capture-area { background: transparent; padding: 10px; display: inline-block; }
-    .card { width: 450px; height: 160px; padding: 25px; border-radius: 25px; margin-bottom: 20px; position: relative; box-sizing: border-box; text-align: left; border: 1px solid rgba(0,0,0,0.05); }
-    .label { position: absolute; bottom: 20px; left: 25px; font-weight: bold; font-size: 26px; line-height: 1.2em; }
-    .code { font-size: 20px; opacity: 0.8; font-weight: normal; }
-
-    #result-output { margin-top: 20px; text-align: center; border-top: 2px dashed #ccc; padding-top: 20px; display: none; }
-    #result-output img { 
-        max-width: 100%; border: 2px solid #007AFF; border-radius: 8px;
-        background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%), 
-                          linear-gradient(45deg, #eee 25%, white 25%, white 75%, #eee 75%);
-        background-size: 20px 20px; background-position: 0 0, 10px 10px;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ver 5.3.0</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0f172a; overflow: hidden; touch-action: none; font-family: sans-serif; }
+        canvas { display: block; }
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; }
+        .st-info { position: absolute; top: 20px; width: 100%; text-align: center; }
+        .retry-btn { position: absolute; bottom: 20px; left: 20px; padding: 12px 25px; background: white; color: black; border-radius: 20px; font-weight: bold; pointer-events: auto; }
+    </style>
 </head>
 <body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="ui-layer">
+        <div class="st-info">
+            <h2 id="stName">STAGE 1</h2>
+            <p id="stHint">引っ張ってショット！</p>
+        </div>
+        <div class="retry-btn" onclick="resetStage()">RETRY</div>
+    </div>
 
-<div class="btn-area">
-    <button class="download-btn" onclick="generateImage()">透明な画像を作成する</button>
-</div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-<div class="controls" id="ui-root"></div>
+        let W, H, currentStage = 0, gameTime = 0;
+        let ball = { x: 0, y: 0, r: 13, vx: 0, vy: 0, moving: false, inHole: false };
+        let touch = { active: false, sx: 0, sy: 0, cx: 0, cy: 0 };
+        const stages = [];
 
-<div id="capture-area"></div>
+        function createStages() {
+            stages.length = 0;
+            for(let i=1; i<=20; i++) {
+                let s = { 
+                    name: `STAGE ${i}`, hint: "穴へ落とそう", 
+                    hX: 0.8, hW: Math.max(40, 85 - (i*2)), gY: 0.8,
+                    obs: [], dynHole: (i%7===0)
+                };
+                if(i===1) s.obs.push({t:'block', x:0.5, y:0.5, w:30, h:200});
+                else if(i===2) s.obs.push({t:'rot', x:0.6, y:0.4, l:100, s:0.07});
+                else if(i===3) { s.hint="加速パッド"; s.obs.push({t:'accel', x:0.4, y:0.78, w:100, p:18}); }
+                else if(i===4) { s.hint="ワープゾーン"; s.obs.push({t:'warp', x:0.3, y:0.7, tx:0.7, ty:0.2}); }
+                else if(i===5) { s.hint="動く床"; s.obs.push({t:'move', x:0.3, y:0.6, w:120, h:20, r:150, s:3}); }
+                else if(i===6) { s.hint="低重力"; s.obs.push({t:'lowG', x:0.4, y:0.1, w:150, h:400}); }
+                else {
+                    if(i%3===0) s.obs.push({t:'move', x:0.25, y:0.5, w:100, h:20, r:150, s:i*0.2});
+                    if(i%2===0) s.obs.push({t:'rot', x:0.5, y:0.3, l:80, s:0.06+(i*0.005)});
+                    if(i>10) s.obs.push({t:'spike', x:0.3, y:0.78, w:120});
+                }
+                stages.push(s);
+            }
+        }
 
-<div id="result-output">
-    <p style="color:#007AFF; font-weight:bold;">↓ 下の画像を長押しして保存 ↓</p>
-    <div id="img-container"></div>
-</div>
+        function resize() {
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = W; canvas.height = H;
+            createStages(); resetStage();
+        }
 
-<script>
-// 拡張されたカラーリスト
-const COLOR_NAMES = [
-    // モノトーン
-    {name:"WHITE",rgb:[255,255,255]},{name:"SNOW",rgb:[255,250,250]},{name:"IVORY",rgb:[255,255,240]},{name:"SILVER",rgb:[192,192,192]},{name:"GRAY",rgb:[128,128,128]},{name:"CHARCOAL",rgb:[54,69,79]},{name:"BLACK",rgb:[0,0,0]},
-    // ブルー・水色
-    {name:"SKY BLUE",rgb:[135,206,235]},{name:"LIGHT BLUE",rgb:[173,216,230]},{name:"AQUA",rgb:[0,255,255]},{name:"TURQUOISE",rgb:[64,224,208]},{name:"CYAN",rgb:[0,255,255]},{name:"BABY BLUE",rgb:[137,207,240]},{name:"STEEL BLUE",rgb:[70,130,180]},{name:"ROYAL BLUE",rgb:[65,105,225]},{name:"NAVY",rgb:[0,0,128]},{name:"ICE BLUE",rgb:[240,248,255]},
-    // グリーン
-    {name:"MINT",rgb:[189,252,201]},{name:"SEA FOAM",rgb:[154,255,154]},{name:"PALE GREEN",rgb:[152,251,152]},{name:"LIME",rgb:[0,255,0]},{name:"OLIVE",rgb:[128,128,0]},{name:"FOREST GREEN",rgb:[34,139,34]},{name:"EMERALD",rgb:[80,200,120]},{name:"PISTACHIO",rgb:[147,197,114]},
-    // ピンク・赤
-    {name:"PINK",rgb:[255,192,203]},{name:"LIGHT PINK",rgb:[255,182,193]},{name:"CHERRY BLOSSOM",rgb:[255,183,197]},{name:"ROSE",rgb:[255,0,127]},{name:"HOT PINK",rgb:[255,105,180]},{name:"CORAL",rgb:[255,127,80]},{name:"SALMON",rgb:[250,128,114]},{name:"RED",rgb:[255,0,0]},{name:"WINE RED",rgb:[153,0,0]},{name:"BURGUNDY",rgb:[128,0,32]},
-    // イエロー・オレンジ・ブラウン
-    {name:"YELLOW",rgb:[255,255,0]},{name:"LEMON",rgb:[255,250,205]},{name:"CREAM",rgb:[255,253,208]},{name:"BEIGE",rgb:[245,245,220]},{name:"PEACH",rgb:[255,218,185]},{name:"ORANGE",rgb:[255,165,0]},{name:"APRICOT",rgb:[251,206,177]},{name:"BROWN",rgb:[165,42,42]},{name:"CHOCOLATE",rgb:[123,63,0]},{name:"CAMEL",rgb:[193,154,107]},{name:"TERRACOTTA",rgb:[226,114,91]},
-    // パープル・バイオレット
-    {name:"LAVENDER",rgb:[230,230,250]},{name:"LILAC",rgb:[200,162,200]},{name:"MAUVE",rgb:[224,176,255]},{name:"PURPLE",rgb:[128,0,128]},{name:"VIOLET",rgb:[238,130,238]},{name:"ORCHID",rgb:[218,112,214]}
-];
+        function resetStage() {
+            const s = stages[currentStage];
+            ball.x = 80; ball.y = (H * s.gY) - ball.r - 20;
+            ball.vx = 0; ball.vy = 0; ball.moving = false; ball.inHole = false;
+            document.getElementById('stName').innerText = s.name;
+            document.getElementById('stHint').innerText = s.hint;
+        }
 
-function hexToRgb(hex) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b];
-}
+        window.addEventListener('touchstart', e => {
+            if(!ball.moving) {
+                touch.active = true; touch.sx = e.touches[0].clientX; touch.sy = e.touches[0].clientY;
+                touch.cx = touch.sx; touch.cy = touch.sy;
+            }
+        }, {passive:false});
+        window.addEventListener('touchmove', e => {
+            if(touch.active) { touch.cx = e.touches[0].clientX; touch.cy = e.touches[0].clientY; }
+            e.preventDefault();
+        }, {passive:false});
+        window.addEventListener('touchend', () => {
+            if(touch.active) {
+                ball.vx = (touch.sx - touch.cx) * 0.13; ball.vy = (touch.sy - touch.cy) * 0.13;
+                ball.moving = true; touch.active = false;
+            }
+        });
 
-function getClosestName(hex) {
-    const [r, g, b] = hexToRgb(hex);
-    let closest = "CUSTOM COLOR";
-    let minDist = Infinity;
-    COLOR_NAMES.forEach(c => {
-        const d = Math.pow(r-c.rgb[0],2) + Math.pow(g-c.rgb[1],2) + Math.pow(b-c.rgb[2],2);
-        if(d < minDist) { minDist = d; closest = c.name; }
-    });
-    return closest;
-}
+        function loop() {
+            gameTime++;
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+            const s = stages[currentStage];
+            const gY = H * s.gY;
+            let hW = s.hW; if(s.dynHole) hW += Math.sin(gameTime*0.07)*25;
+            const hL = (W * s.hX) - hW/2;
+            let curG = 0.5;
 
-function sync(i, source) {
-    const hexI = document.getElementById(`hex${i}`);
-    const colI = document.getElementById(`col${i}`);
-    const labI = document.getElementById(`lab${i}`);
-    const card = document.getElementById(`card${i}`);
-    const ln = document.getElementById(`ln${i}`);
-    const lc = document.getElementById(`lc${i}`);
+            // 1. 地面と穴
+            ctx.fillStyle = '#10b981'; ctx.fillRect(0, gY, W, H-gY);
+            ctx.fillStyle = '#000000'; ctx.fillRect(hL, gY, hW, 100);
 
-    let val = (source === 'p' ? colI.value : hexI.value).trim();
-    if (source === 'h' && val.length === 6 && !val.startsWith('#')) val = '#' + val;
-    
-    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-        if (source === 'p') hexI.value = val.replace('#','').toUpperCase();
-        if (source === 'h') colI.value = val;
-        if (labI.dataset.manual !== "true") labI.value = getClosestName(val);
+            // 2. ギミック更新 & 描画
+            s.obs.forEach(o => {
+                if(o.t==='lowG') {
+                    ctx.fillStyle = "rgba(56,189,248,0.1)"; ctx.fillRect(o.x*W, o.y*H, o.w, o.h);
+                    if(ball.x > o.x*W && ball.x < o.x*W+o.w && ball.y > o.y*H && ball.y < o.y*H+o.h) curG = 0.15;
+                }
+                if(o.t==='rot') {
+                    o.a = (o.a || 0) + o.s;
+                    let x2 = o.x*W + Math.cos(o.a)*o.l, y2 = o.y*H + Math.sin(o.a)*o.l;
+                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(o.x*W, o.y*H); ctx.lineTo(x2, y2); ctx.stroke();
+                    let dx = x2-o.x*W, dy = y2-o.y*H, l2 = dx*dx+dy*dy;
+                    let t = Math.max(0, Math.min(1, ((ball.x-o.x*W)*dx+(ball.y-o.y*H)*dy)/l2));
+                    if(Math.hypot(ball.x-(o.x*W+t*dx), ball.y-(o.y*H+t*dy)) < ball.r) { ball.vx*=-1.2; ball.vy*=-1.2; }
+                }
+                if(o.t==='block' || o.t==='move') {
+                    if(o.t==='move') {
+                        o.cX = (o.cX || o.x*W) + (o.d || 1)*o.s;
+                        if(o.cX > o.x*W+o.r || o.cX < o.x*W) o.d = (o.d || 1)*-1;
+                    }
+                    let bx = o.t==='move' ? o.cX : o.x*W, by = o.y*H;
+                    ctx.fillStyle = '#64748b'; ctx.fillRect(bx, by, o.w, o.h);
+                    if(ball.x+ball.r > bx && ball.x-ball.r < bx+o.w && ball.y+ball.r > by && ball.y-ball.r < by+o.h) {
+                        ball.vx*=-0.7; ball.vy*=-0.7;
+                    }
+                }
+                if(o.t==='warp' && Math.hypot(ball.x-o.x*W, ball.y-o.y*H) < 25) { ball.x = o.tx*W; ball.y = o.ty*H; }
+                if(o.t==='accel' && ball.x > o.x*W && ball.x < o.x*W+o.w && Math.abs(ball.y+ball.r - gY) < 15) { ball.vx = o.p; }
+                if(o.t==='spike') {
+                    ctx.fillStyle = '#ef4444'; for(let j=0; j<o.w; j+=20) {
+                        ctx.beginPath(); ctx.moveTo(o.x*W+j, gY); ctx.lineTo(o.x*W+j+10, gY-20); ctx.lineTo(o.x*W+j+20, gY); ctx.fill();
+                    }
+                    if(ball.x > o.x*W && ball.x < o.x*W+o.w && ball.y+ball.r > gY-5 && !ball.inHole) resetStage();
+                }
+            });
 
-        card.style.background = val;
-        card.style.border = "none";
-        lc.textContent = val.toUpperCase();
-        const [r,g,b] = hexToRgb(val);
-        const bright = (r*299 + g*587 + b*114) / 1000;
-        card.style.color = bright > 180 ? "#555" : "#fff";
-    }
-    ln.textContent = labI.value;
-}
+            // 3. 物理
+            if(ball.moving) {
+                ball.vy += curG; ball.x += ball.vx; ball.y += ball.vy;
+                if(ball.y + ball.r > gY) {
+                    if(ball.x > hL && ball.x < hL + hW) { ball.inHole = true; ball.vx *= 0.95; }
+                    else if(!ball.inHole) { ball.y = gY-ball.r; ball.vy *= -0.3; ball.vx *= 0.8; }
+                }
+            }
 
-// UI生成
-const uiRoot = document.getElementById('ui-root');
-const capArea = document.getElementById('capture-area');
-for (let i = 1; i <= 4; i++) {
-    uiRoot.innerHTML += `
-        <div class="control-row">
-            <h3>CARD ${i}</h3>
-            <input id="lab${i}" type="text" placeholder="名前" onfocus="this.dataset.manual='true'">
-            <input id="hex${i}" class="hex-input" type="text" placeholder="FFFFFF" maxlength="6" inputmode="email">
-            <input id="col${i}" type="color" value="#ffffff">
-        </div>`;
-    capArea.innerHTML += `
-        <div id="card${i}" class="card"><div class="label"><span id="ln${i}"></span><br><span id="lc${i}" class="code"></span></div></div>`;
-}
+            // 4. 予測線
+            if(touch.active) {
+                ctx.beginPath(); ctx.strokeStyle = 'white'; ctx.setLineDash([5, 5]);
+                ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x + (touch.sx-touch.cx), ball.y + (touch.sy-touch.cy));
+                ctx.stroke(); ctx.setLineDash([]);
+            }
 
-// イベント登録
-for (let i = 1; i <= 4; i++) {
-    document.getElementById(`hex${i}`).addEventListener("input", () => sync(i, 'h'));
-    document.getElementById(`col${i}`).addEventListener("input", () => sync(i, 'p'));
-    document.getElementById(`lab${i}`).addEventListener("input", (e) => { e.target.dataset.manual = "true"; sync(i, 'h'); });
-}
+            // 5. ボール
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+            ctx.fillStyle = 'white'; ctx.fill(); ctx.strokeStyle = 'black'; ctx.lineWidth = 2; ctx.stroke();
 
-function generateImage() {
-    const output = document.getElementById("result-output");
-    const container = document.getElementById("img-container");
-    html2canvas(document.getElementById("capture-area"), { scale: 2, backgroundColor: null }).then(canvas => {
-        const img = new Image();
-        img.src = canvas.toDataURL("image/png");
-        container.innerHTML = "";
-        container.appendChild(img);
-        output.style.display = "block";
-        output.scrollIntoView({ behavior: 'smooth' });
-    });
-}
-</script>
+            if(ball.y > H + 50) { if(ball.inHole) currentStage = (currentStage+1)%20; resetStage(); }
+            if(ball.x < -50 || ball.x > W + 50) resetStage();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('resize', resize);
+        resize(); loop();
+    </script>
 </body>
 </html>
