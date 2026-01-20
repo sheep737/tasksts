@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.3</title>
+<title>ver 5.3.4</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -40,6 +40,14 @@ const ball={
 };
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
+/* ===== ユーティリティ ===== */
+function circleRectHit(cx,cy,cr,rx,ry,rw,rh){
+  const nx=Math.max(rx,Math.min(cx,rx+rw));
+  const ny=Math.max(ry,Math.min(cy,ry+rh));
+  return Math.hypot(cx-nx,cy-ny)<=cr;
+}
+
+/* ===== ステージ生成 ===== */
 function createStages(){
 stages.length=0;
 for(let i=1;i<=20;i++){
@@ -52,27 +60,21 @@ gY:0.8,
 dynHole:i%7===0,
 obs:[]
 };
-if(i===1) s.obs.push({t:"block",x:.5,y:.5,w:30,h:200});
-else if(i===2) s.obs.push({t:"rot",x:.6,y:.4,l:100,s:.07});
-else if(i===3){s.hint="加速パッド";s.obs.push({t:"accel",x:.4,y:.78,w:100,p:12});}
-else if(i===4){s.hint="ワープゾーン";s.obs.push({t:"warp",x:.3,y:.7,tx:.7,ty:.2});}
-else if(i===5){s.hint="動く床";s.obs.push({t:"move",x:.3,y:.6,w:120,h:20,r:150,s:2});}
-else if(i===6){s.hint="低重力";s.obs.push({t:"lowG",x:.35,y:.1,w:.25,h:.5});}
+if(i===1) s.obs.push({t:"block",x:.5,y:.55,w:30,h:200});
+else if(i===5) s.obs.push({t:"move",x:.25,y:.6,w:140,h:22,r:120,s:1.5});
 else{
-if(i%3===0) s.obs.push({t:"move",x:.25,y:.5,w:100,h:20,r:150,s:i*.15});
-if(i%2===0) s.obs.push({t:"rot",x:.5,y:.3,l:80,s:.05+i*.004});
-if(i>10) s.obs.push({t:"spike",x:.3,y:.78,w:120});
+if(i%3===0) s.obs.push({t:"move",x:.25,y:.55,w:120,h:20,r:160,s:1+i*.15});
+if(i%2===0) s.obs.push({t:"block",x:.55,y:.5,w:40,h:180});
 }
 stages.push(s);
 }
 }
 
+/* ===== 初期化 ===== */
 function resize(){
 W=innerWidth;H=innerHeight;
 canvas.width=W;canvas.height=H;
-resetStage();
 }
-
 function resetStage(){
 const s=stages[currentStage];
 ball.x=80;
@@ -87,6 +89,7 @@ stName.textContent=s.name;
 stHint.textContent=s.hint;
 }
 
+/* ===== 入力 ===== */
 addEventListener("touchstart",e=>{
 if(!ball.moving){
 touch.active=true;
@@ -110,6 +113,7 @@ ball.moving=true;
 touch.active=false;
 }});
 
+/* ===== メインループ ===== */
 function loop(){
 gameTime++;
 ctx.fillStyle="#0f172a";
@@ -122,36 +126,73 @@ const hL=W*s.hX-hW/2;
 const holeCX=hL+hW/2;
 const holeCY=gY+10;
 
-let curG=.5;
-
+/* ===== 地面 & 穴 ===== */
 ctx.fillStyle="#10b981";
 ctx.fillRect(0,gY,W,H-gY);
 ctx.fillStyle="#000";
 ctx.fillRect(hL,gY,hW,100);
 
+/* ===== 障害物 ===== */
 s.obs.forEach(o=>{
-if(o.t==="lowG"){
-const x=o.x*W,y=o.y*H,w=o.w*W,h=o.h*H;
-ctx.fillStyle="rgba(56,189,248,.15)";
+
+/* --- block --- */
+if(o.t==="block"){
+const x=o.x*W,y=o.y*H,w=o.w,h=o.h;
+ctx.fillStyle="#475569";
 ctx.fillRect(x,y,w,h);
-if(ball.x>x&&ball.x<x+w&&ball.y>y&&ball.y<y+h)curG=.15;
+
+if(circleRectHit(ball.x,ball.y,ball.r,x,y,w,h)){
+const prevY=ball.y-ball.vy;
+if(prevY+ball.r<=y+6){
+ball.y=y-ball.r;
+ball.vy=0;
+ball.vx*=0.85;
+}else{
+if(ball.x<x) ball.x=x-ball.r;
+if(ball.x>x+w) ball.x=x+w+ball.r;
+ball.vx*=0.3;
 }
+}
+}
+
+/* --- move --- */
+if(o.t==="move"){
+const baseX=o.x*W, baseY=o.y*H;
+const ox=Math.sin(gameTime*0.02*o.s)*o.r;
+const x=baseX+ox, y=baseY;
+
+ctx.fillStyle="#22c55e";
+ctx.fillRect(x,y,o.w,o.h);
+
+if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
+const prevY=ball.y-ball.vy;
+if(prevY+ball.r<=y+6){
+ball.y=y-ball.r;
+ball.vy=0;
+ball.x+=ox-(o.prevOx||0);
+}else{
+ball.vx*=0.2;
+}
+}
+o.prevOx=ox;
+}
+
 });
 
 /* ===== 物理 ===== */
 if(ball.moving && !ball.inHole){
-ball.vy+=curG;
+ball.vy+=0.5;
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
 if(ball.y+ball.r>gY){
-if(ball.x>hL&&ball.x<hL+hW){
+if(ball.x>hL+ball.r*0.4 && ball.x<hL+hW-ball.r*0.4){
 ball.inHole=true;
 ball.vx=ball.vy=0;
 }else{
 ball.y=gY-ball.r;
-ball.vy*=-.3;
-ball.vx*=.8;
+ball.vy*=-0.3;
+ball.vx*=0.8;
 }
 }
 }
@@ -159,11 +200,10 @@ ball.vx*=.8;
 /* ===== 吸い込み演出 ===== */
 if(ball.inHole){
 ball.holeTime++;
-
-ball.x += (holeCX-ball.x)*0.15;
-ball.y += (holeCY-ball.y)*0.15;
-ball.r *= 0.94;
-ball.alpha *= 0.92;
+ball.x+=(holeCX-ball.x)*0.15;
+ball.y+=(holeCY-ball.y)*0.15;
+ball.r*=0.94;
+ball.alpha*=0.92;
 }
 
 /* ===== 描画 ===== */
@@ -177,6 +217,7 @@ ctx.lineWidth=2;
 ctx.stroke();
 ctx.globalAlpha=1;
 
+/* ===== ステージ遷移 ===== */
 if(ball.inHole && ball.holeTime>35){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
@@ -185,9 +226,11 @@ resetStage();
 requestAnimationFrame(loop);
 }
 
+/* ===== 起動 ===== */
 createStages();
 addEventListener("resize",resize);
 resize();
+resetStage();
 loop();
 </script>
 </body>
