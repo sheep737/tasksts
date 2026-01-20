@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.5.0</title>
+<title>ver 5.6.0</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -31,56 +31,57 @@ const ctx=canvas.getContext("2d");
 let W,H,gameTime=0,currentStage=0;
 const stages=[];
 const ball={
-  x:0,y:0,r:13,baseR:13,
+  x:0,y:0,r:13,
   vx:0,vy:0,
   moving:false,
   holeFalling:false
 };
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
-/* ===== Utility ===== */
-function circleRectHit(cx,cy,cr,rx,ry,rw,rh){
-  const nx=Math.max(rx,Math.min(cx,rx+rw));
-  const ny=Math.max(ry,Math.min(cy,ry+rh));
-  return Math.hypot(cx-nx,cy-ny)<=cr;
+/* ===== 完全衝突解決 ===== */
+function resolveCircleRect(ball, rx, ry, rw, rh){
+  const nx=Math.max(rx,Math.min(ball.x,rx+rw));
+  const ny=Math.max(ry,Math.min(ball.y,ry+rh));
+  const dx=ball.x-nx;
+  const dy=ball.y-ny;
+  const dist=Math.hypot(dx,dy);
+
+  if(dist<ball.r){
+    const overlap=ball.r-dist||0.01;
+    const ux=dx/dist;
+    const uy=dy/dist;
+
+    ball.x+=ux*overlap;
+    ball.y+=uy*overlap;
+
+    if(Math.abs(uy)>Math.abs(ux)){
+      ball.vy=0;
+    }else{
+      ball.vx*=-0.4;
+    }
+    return true;
+  }
+  return false;
 }
 
-/* ===== Stage Create ===== */
+/* ===== ステージ生成 ===== */
 function createStages(){
 stages.length=0;
-for(let i=1;i<=20;i++){
-const s={
+for(let i=1;i<=10;i++){
+stages.push({
  name:`STAGE ${i}`,
- hint:
-  i<4?"狙って打つ":
-  i<7?"待て":
-  i<11?"動きを読む":
-  i<15?"焦るな":
-  "判断しろ",
- hX:.75,
- hW:Math.max(50,90-i*2),
- gY:.8,
- dynHole:i%6===0,
- obs:[]
-};
-
-/* 基本障害物 */
-if(i%2===0) s.obs.push({t:"block",x:.55,y:.5,w:40,h:180});
-if(i%3===0) s.obs.push({t:"move",x:.25,y:.6,w:130,h:20,r:140,s:1+.1*i});
-
-/* blink導入 */
-if(i>=3 && i<=8)
- s.obs.push({t:"blink",x:.35,y:.6,w:160,h:18,p:90});
-if(i>=9 && i<=14)
- s.obs.push({t:"blink",x:.45,y:.55,w:140,h:18,p:70});
-if(i>=15)
- s.obs.push({t:"blink",x:.3,y:.55,w:120,h:18,p:50});
-
-stages.push(s);
+ hint:i<4?"落ち着け":i<7?"待て":"判断",
+ hX:.75,hW:80,gY:.8,
+ obs:[
+  ...(i%2?[{t:"block",x:.55,y:.5,w:40,h:180}]:[]),
+  ...(i%3?[{t:"move",x:.25,y:.6,w:130,h:20,r:140,s:1+i*.1}]:[]),
+  ...(i>=3?[{t:"blink",x:.35,y:.6,w:160,h:18,p:80}]:[])
+ ]
+});
 }
 }
 
-/* ===== Init ===== */
+/* ===== 初期化 ===== */
 function resize(){
 W=innerWidth;H=innerHeight;
 canvas.width=W;canvas.height=H;
@@ -88,7 +89,7 @@ canvas.width=W;canvas.height=H;
 function resetStage(){
 const s=stages[currentStage];
 ball.x=80;
-ball.y=H*s.gY-ball.baseR-20;
+ball.y=H*s.gY-ball.r-20;
 ball.vx=ball.vy=0;
 ball.moving=false;
 ball.holeFalling=false;
@@ -96,7 +97,7 @@ stName.textContent=s.name;
 stHint.textContent=s.hint;
 }
 
-/* ===== Input ===== */
+/* ===== 入力 ===== */
 addEventListener("touchstart",e=>{
 if(!ball.moving){
 touch.active=true;
@@ -120,7 +121,7 @@ ball.moving=true;
 touch.active=false;
 }});
 
-/* ===== Loop ===== */
+/* ===== ループ ===== */
 function loop(){
 gameTime++;
 ctx.fillStyle="#0f172a";
@@ -128,29 +129,22 @@ ctx.fillRect(0,0,W,H);
 
 const s=stages[currentStage];
 const gY=H*s.gY;
-const hW=s.hW+(s.dynHole?Math.sin(gameTime*.07)*25:0);
-const hL=W*s.hX-hW/2;
-const holeCX=hL+hW/2;
+const hL=W*s.hX-s.hW/2;
+const holeCX=hL+s.hW/2;
 
-/* Ground */
+/* 地面 */
 ctx.fillStyle="#10b981";
 ctx.fillRect(0,gY,W,H-gY);
 ctx.fillStyle="#000";
-ctx.fillRect(hL,gY,hW,200);
+ctx.fillRect(hL,gY,s.hW,200);
 
-/* Obstacles */
+/* 障害物 */
 s.obs.forEach(o=>{
-
 if(o.t==="block"){
 const x=o.x*W,y=o.y*H;
 ctx.fillStyle="#475569";
 ctx.fillRect(x,y,o.w,o.h);
-if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
-const py=ball.y-ball.vy;
-if(py+ball.r<=y+6){
-ball.y=y-ball.r; ball.vy=0; ball.vx*=0.85;
-}
-}
+resolveCircleRect(ball,x,y,o.w,o.h);
 }
 
 if(o.t==="move"){
@@ -159,12 +153,8 @@ const ox=Math.sin(gameTime*0.02*o.s)*o.r;
 const x=bx+ox,y=by;
 ctx.fillStyle="#22c55e";
 ctx.fillRect(x,y,o.w,o.h);
-if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
-const py=ball.y-ball.vy;
-if(py+ball.r<=y+6){
-ball.y=y-ball.r; ball.vy=0;
+if(resolveCircleRect(ball,x,y,o.w,o.h)){
 ball.x+=ox-(o.prevOx||0);
-}
 }
 o.prevOx=ox;
 }
@@ -175,47 +165,42 @@ const on=Math.floor(gameTime/o.p)%2===0;
 if(on){
 ctx.fillStyle="#38bdf8";
 ctx.fillRect(x,y,o.w,o.h);
-if(circleRectHit(ball.x,ball.y,ball.r,x,y,o.w,o.h)){
-const py=ball.y-ball.vy;
-if(py+ball.r<=y+6){
-ball.y=y-ball.r; ball.vy=0; ball.vx*=0.9;
-}
-}
+resolveCircleRect(ball,x,y,o.w,o.h);
 }else{
-ctx.strokeStyle="rgba(255,255,255,.25)";
 ctx.setLineDash([6,6]);
+ctx.strokeStyle="rgba(255,255,255,.25)";
 ctx.strokeRect(x,y,o.w,o.h);
 ctx.setLineDash([]);
 }
 }
-
 });
 
-/* Physics */
-if(ball.moving && !ball.holeFalling){
+/* 物理 */
+if(ball.moving&&!ball.holeFalling){
 ball.vy+=0.5;
 ball.x+=ball.vx;
 ball.y+=ball.vy;
+
 if(ball.y+ball.r>gY){
-if(ball.x>hL+ball.r*.4 && ball.x<hL+hW-ball.r*.4){
+if(ball.x>hL+ball.r*.4&&ball.x<hL+s.hW-ball.r*.4){
 ball.holeFalling=true;
-ball.vx=0; ball.vy=2;
+ball.vx=0;ball.vy=2;
 }else{
 ball.y=gY-ball.r;
-ball.vy*=-.3; ball.vx*=.8;
+ball.vy*=-.3;ball.vx*=.8;
 }
 }
 }
 
-/* Hole fall */
+/* 穴 */
 if(ball.holeFalling){
 ball.x+=(holeCX-ball.x)*0.1;
 ball.vy+=1.2;
 ball.y+=ball.vy;
 }
 
-/* Aim line */
-if(touch.active && !ball.moving){
+/* 予測線 */
+if(touch.active&&!ball.moving){
 ctx.setLineDash([6,6]);
 ctx.strokeStyle="rgba(255,255,255,.8)";
 ctx.beginPath();
@@ -225,7 +210,7 @@ ctx.stroke();
 ctx.setLineDash([]);
 }
 
-/* Ball */
+/* ボール */
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fillStyle="white";
@@ -233,8 +218,8 @@ ctx.fill();
 ctx.strokeStyle="black";
 ctx.stroke();
 
-/* Next */
-if(ball.holeFalling && ball.y>H+60){
+/* 次 */
+if(ball.holeFalling&&ball.y>H+60){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
 }
@@ -242,7 +227,7 @@ resetStage();
 requestAnimationFrame(loop);
 }
 
-/* Start */
+/* 起動 */
 createStages();
 addEventListener("resize",resize);
 resize();
