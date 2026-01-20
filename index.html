@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.1</title>
+<title>ver 5.3.2</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -15,6 +15,7 @@ canvas{display:block}
 <body>
 
 <canvas id="gameCanvas"></canvas>
+
 <div class="ui-layer">
   <div class="st-info">
     <h2 id="stName"></h2>
@@ -29,7 +30,13 @@ const ctx = canvas.getContext("2d");
 
 let W,H,gameTime=0,currentStage=0;
 const stages=[];
-const ball={x:0,y:0,r:13,vx:0,vy:0,moving:false,inHole:false};
+const ball={
+  x:0,y:0,r:13,
+  vx:0,vy:0,
+  moving:false,
+  inHole:false,
+  holeTime:0
+};
 const touch={active:false,sx:0,sy:0,cx:0,cy:0};
 
 function createStages(){
@@ -72,6 +79,7 @@ ball.y=H*s.gY-ball.r-20;
 ball.vx=ball.vy=0;
 ball.moving=false;
 ball.inHole=false;
+ball.holeTime=0;
 stName.textContent=s.name;
 stHint.textContent=s.hint;
 }
@@ -129,7 +137,7 @@ ctx.arc(o.x*W,o.y*H,25,0,Math.PI*2);
 ctx.strokeStyle="#38bdf8";
 ctx.lineWidth=2;
 ctx.stroke();
-if(Math.hypot(ball.x-o.x*W,ball.y-o.y*H)<25){
+if(!ball.inHole && Math.hypot(ball.x-o.x*W,ball.y-o.y*H)<25){
 ball.x=o.tx*W;
 ball.y=o.ty*H;
 }
@@ -138,7 +146,7 @@ ball.y=o.ty*H;
 if(o.t==="accel"){
 ctx.fillStyle="#facc15";
 ctx.fillRect(o.x*W,gY-6,o.w,6);
-if(ball.x>o.x*W&&ball.x<o.x*W+o.w&&Math.abs(ball.y+ball.r-gY)<12){
+if(!ball.inHole && ball.x>o.x*W&&ball.x<o.x*W+o.w&&Math.abs(ball.y+ball.r-gY)<12){
 ball.vx+=o.p*Math.sign(ball.vx||1);
 }
 }
@@ -152,7 +160,7 @@ const bx=o.t==="move"?o.cX:o.x*W;
 const by=o.y*H;
 ctx.fillStyle="#64748b";
 ctx.fillRect(bx,by,o.w,o.h);
-if(ball.x+ball.r>bx&&ball.x-ball.r<bx+o.w&&ball.y+ball.r>by&&ball.y-ball.r<by+o.h){
+if(!ball.inHole && ball.x+ball.r>bx&&ball.x-ball.r<bx+o.w&&ball.y+ball.r>by&&ball.y-ball.r<by+o.h){
 ball.vx*=-.7;ball.vy*=-.7;
 }
 }
@@ -170,7 +178,7 @@ ctx.lineTo(x2,y2);
 ctx.stroke();
 const dx=x2-x1,dy=y2-y1;
 const t=Math.max(0,Math.min(1,((ball.x-x1)*dx+(ball.y-y1)*dy)/(dx*dx+dy*dy)));
-if(Math.hypot(ball.x-(x1+t*dx),ball.y-(y1+t*dy))<ball.r){
+if(!ball.inHole && Math.hypot(ball.x-(x1+t*dx),ball.y-(y1+t*dy))<ball.r){
 ball.vx*=-1.1;ball.vy*=-1.1;
 }
 }
@@ -184,27 +192,32 @@ ctx.lineTo(o.x*W+j+10,gY-20);
 ctx.lineTo(o.x*W+j+20,gY);
 ctx.fill();
 }
-if(ball.x>o.x*W&&ball.x<o.x*W+o.w&&ball.y+ball.r>gY-5&&!ball.inHole){
+if(!ball.inHole && ball.x>o.x*W&&ball.x<o.x*W+o.w&&ball.y+ball.r>gY-5){
 resetStage();
 }
 }
 });
 
-if(ball.moving){
+if(ball.moving && !ball.inHole){
 ball.vy+=curG;
 ball.x+=ball.vx;
 ball.y+=ball.vy;
+
 if(ball.y+ball.r>gY){
 if(ball.x>hL&&ball.x<hL+hW){
 ball.inHole=true;
-ball.vx*=.95;
-ball.vy*=.95;
-}else if(!ball.inHole){
+ball.vx=0;
+ball.vy=0;
+}else{
 ball.y=gY-ball.r;
 ball.vy*=-.3;
 ball.vx*=.8;
 }
 }
+}
+
+if(ball.inHole){
+ball.holeTime++;
 }
 
 if(touch.active){
@@ -225,7 +238,7 @@ ctx.strokeStyle="black";
 ctx.lineWidth=2;
 ctx.stroke();
 
-if(ball.inHole&&Math.abs(ball.vx)+Math.abs(ball.vy)<0.4){
+if(ball.inHole && ball.holeTime>40){
 currentStage=(currentStage+1)%stages.length;
 resetStage();
 }
