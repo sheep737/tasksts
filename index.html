@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ver 5.3.4</title>
+<title>ver 5.3.5</title>
 <style>
 body{margin:0;background:#0f172a;overflow:hidden;touch-action:none;font-family:sans-serif}
 canvas{display:block}
@@ -206,7 +206,22 @@ ball.r*=0.94;
 ball.alpha*=0.92;
 }
 
-/* ===== 描画 ===== */
+/* ===== 予測線（復活） ===== */
+if(touch.active && !ball.moving){
+ctx.beginPath();
+ctx.setLineDash([6,6]);
+ctx.strokeStyle="rgba(255,255,255,0.8)";
+ctx.lineWidth=2;
+ctx.moveTo(ball.x,ball.y);
+ctx.lineTo(
+  ball.x+(touch.sx-touch.cx),
+  ball.y+(touch.sy-touch.cy)
+);
+ctx.stroke();
+ctx.setLineDash([]);
+}
+
+/* ===== ボール描画 ===== */
 ctx.globalAlpha=ball.alpha;
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,Math.max(0,ball.r),0,Math.PI*2);
